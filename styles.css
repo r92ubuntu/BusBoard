@@ -425,6 +425,21 @@ h1 {
   text-decoration: none;
 }
 
+.sound-prompt {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 3;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(9, 11, 15, 0.88);
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .ad-fallback {
   display: grid;
   align-content: center;

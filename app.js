@@ -27,6 +27,7 @@ let adSignature = "";
 let adTimer = null;
 let youtubePlayer = null;
 let youtubeApiPromise = null;
+let soundEnabled = localStorage.getItem("busboard.soundEnabled.v1") === "yes";
 const youtubeMaxMs = 180000;
 const fallbackAds = [
   { title: "Anunciate aqui", text: "Espacio disponible para comercios locales" },
@@ -288,13 +289,18 @@ function renderAd() {
     const video = document.createElement("video");
     video.src = item.src;
     video.autoplay = true;
-    video.muted = false;
+    video.muted = !soundEnabled;
     video.volume = 1;
     video.loop = false;
     video.playsInline = true;
     video.onerror = () => renderFallbackAd(fallback);
     video.onended = nextAd;
     els.adStage.appendChild(wrapAd(item, video));
+    video.play().catch(() => {
+      video.muted = true;
+      video.play().catch(() => renderFallbackAd(fallback));
+      showSoundPrompt();
+    });
     return;
   }
 
@@ -371,9 +377,16 @@ function renderYoutubeAd(item, fallback) {
       },
       events: {
         onReady: (event) => {
-          event.target.unMute();
-          event.target.setVolume(100);
+          if (soundEnabled) {
+            event.target.unMute();
+            event.target.setVolume(100);
+          } else {
+            event.target.mute();
+          }
           event.target.playVideo();
+          if (!soundEnabled) {
+            showSoundPrompt();
+          }
         },
         onStateChange: (event) => {
           if (event.data === window.YT.PlayerState.ENDED) {
@@ -450,7 +463,40 @@ function renderLinkAd(item) {
   scheduleNextAd();
 }
 
+function showSoundPrompt() {
+  if (document.querySelector(".sound-prompt")) {
+    return;
+  }
+
+  const button = document.createElement("button");
+  button.className = "sound-prompt";
+  button.type = "button";
+  button.textContent = "Activar audio";
+  button.addEventListener("click", () => {
+    soundEnabled = true;
+    localStorage.setItem("busboard.soundEnabled.v1", "yes");
+    if (youtubePlayer?.unMute) {
+      youtubePlayer.unMute();
+      youtubePlayer.setVolume(100);
+      youtubePlayer.playVideo();
+    }
+    const video = els.adStage.querySelector("video");
+    if (video) {
+      video.muted = false;
+      video.volume = 1;
+      video.play().catch(() => {});
+    }
+    button.remove();
+  });
+  els.adStage.appendChild(button);
+}
+
+function removeSoundPrompt() {
+  document.querySelector(".sound-prompt")?.remove();
+}
+
 function clearAdPlayback() {
+  removeSoundPrompt();
   if (adTimer) {
     clearTimeout(adTimer);
     adTimer = null;

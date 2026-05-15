@@ -1,0 +1,4 @@
+window.BusBoardSupabaseConfig = {
+  url: "",
+  anonKey: ""
+};

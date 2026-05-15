@@ -23,6 +23,11 @@ let activeBoardType = "departures";
 let adIndex = 0;
 const pageSize = 11;
 let adItems = [];
+let adSignature = "";
+let adTimer = null;
+let youtubePlayer = null;
+let youtubeApiPromise = null;
+const youtubeMaxMs = 180000;
 const fallbackAds = [
   { title: "Anunciate aqui", text: "Espacio disponible para comercios locales" },
   { title: "Terminal Central", text: "Informacion para pasajeros y visitantes" },
@@ -258,6 +263,8 @@ function render() {
 }
 
 function renderAd() {
+  clearAdPlayback();
+
   if (!adItems.length) {
     renderFallbackAd(fallbackAds[adIndex % fallbackAds.length]);
     return;
@@ -282,9 +289,10 @@ function renderAd() {
     video.src = item.src;
     video.autoplay = true;
     video.muted = true;
-    video.loop = true;
+    video.loop = false;
     video.playsInline = true;
     video.onerror = () => renderFallbackAd(fallback);
+    video.onended = nextAd;
     els.adStage.appendChild(wrapAd(item, video));
     return;
   }
@@ -294,6 +302,7 @@ function renderAd() {
   image.alt = item.title;
   image.onerror = () => renderFallbackAd(fallback);
   els.adStage.appendChild(wrapAd(item, image));
+  scheduleNextAd();
 }
 
 async function syncRemoteData() {
@@ -323,7 +332,7 @@ async function syncRemoteData() {
       })));
     }
 
-    loadAdsForStation();
+    loadAdsForStation(false);
     render();
   } catch (error) {
     console.warn("No se pudo sincronizar con Supabase", error);
@@ -341,7 +350,43 @@ function renderYoutubeAd(item, fallback) {
     return;
   }
 
-  const frame = document.createElement("iframe");
+  const playerId = `youtube-player-${Date.now()}`;
+  const playerHost = document.createElement("div");
+  playerHost.id = playerId;
+  playerHost.className = "youtube-player";
+  els.adStage.appendChild(playerHost);
+
+  loadYoutubeApi().then(() => {
+    scheduleNextAd(youtubeMaxMs);
+    youtubePlayer = new window.YT.Player(playerId, {
+      videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 0,
+        modestbranding: 1,
+        playsinline: 1,
+        rel: 0,
+        mute: 1,
+        origin: window.location.origin && window.location.origin !== "null" ? window.location.origin : undefined
+      },
+      events: {
+        onReady: (event) => {
+          event.target.mute();
+          event.target.playVideo();
+        },
+        onStateChange: (event) => {
+          if (event.data === window.YT.PlayerState.ENDED) {
+            nextAd();
+          }
+        },
+        onError: () => {
+          renderFallbackAd(fallback);
+        }
+      }
+    });
+  }).catch(() => renderFallbackAd(fallback));
+
+  /*
   const origin = window.location.origin && window.location.origin !== "null"
     ? `&origin=${encodeURIComponent(window.location.origin)}`
     : "";
@@ -351,6 +396,7 @@ function renderYoutubeAd(item, fallback) {
   frame.referrerPolicy = "strict-origin-when-cross-origin";
   frame.allowFullscreen = true;
   els.adStage.appendChild(frame);
+  */
 
   if (item.link) {
     const link = document.createElement("a");
@@ -363,6 +409,34 @@ function renderYoutubeAd(item, fallback) {
   }
 }
 
+function loadYoutubeApi() {
+  if (window.YT?.Player) {
+    return Promise.resolve();
+  }
+
+  if (youtubeApiPromise) {
+    return youtubeApiPromise;
+  }
+
+  youtubeApiPromise = new Promise((resolve, reject) => {
+    const previousReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof previousReady === "function") {
+        previousReady();
+      }
+      resolve();
+    };
+
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    script.async = true;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return youtubeApiPromise;
+}
+
 function renderLinkAd(item) {
   const target = item.link || "#";
   els.adStage.innerHTML = `
@@ -372,6 +446,35 @@ function renderLinkAd(item) {
       <p>${escapeHtml(item.text || "Toca para abrir mas informacion")}</p>
     </a>
   `;
+  scheduleNextAd();
+}
+
+function clearAdPlayback() {
+  if (adTimer) {
+    clearTimeout(adTimer);
+    adTimer = null;
+  }
+
+  if (youtubePlayer?.destroy) {
+    youtubePlayer.destroy();
+  }
+  youtubePlayer = null;
+}
+
+function scheduleNextAd(ms = 10000) {
+  if (adTimer) {
+    clearTimeout(adTimer);
+  }
+  adTimer = setTimeout(nextAd, ms);
+}
+
+function nextAd() {
+  if (adItems.length) {
+    adIndex = (adIndex + 1) % adItems.length;
+  } else {
+    adIndex += 1;
+  }
+  renderAd();
 }
 
 function wrapAd(item, node) {
@@ -403,9 +506,10 @@ function renderFallbackAd(item) {
       <p>${escapeHtml(item.text)}</p>
     </div>
   `;
+  scheduleNextAd();
 }
 
-function loadAdsForStation() {
+function loadAdsForStation(forceRender = true) {
   const key = stationKey(store.getActiveStation());
   const configured = Array.isArray(window.BusBoardAdConfig) ? window.BusBoardAdConfig : [];
   const managed = store.readAds().map((ad) => ({
@@ -437,7 +541,22 @@ function loadAdsForStation() {
       link: item.link || ""
     }));
 
-  adItems = [...configuredAds, ...fileAds];
+  const nextItems = [...configuredAds, ...fileAds];
+  const nextSignature = JSON.stringify(nextItems.map((item) => ({
+    type: item.type,
+    title: item.title,
+    src: item.src,
+    youtubeUrl: item.youtubeUrl,
+    link: item.link,
+    display_order: item.display_order
+  })));
+
+  if (!forceRender && nextSignature === adSignature) {
+    return;
+  }
+
+  adItems = nextItems;
+  adSignature = nextSignature;
 
   adIndex = 0;
   renderAd();
@@ -473,13 +592,13 @@ els.activeBoard.addEventListener("click", (event) => {
 els.publicStation.addEventListener("change", () => {
   store.setActiveStation(els.publicStation.value);
   pageIndex = 0;
-  loadAdsForStation();
+  loadAdsForStation(true);
   render();
 });
 
 window.addEventListener("storage", render);
 renderStationOptions();
-loadAdsForStation();
+loadAdsForStation(true);
 render();
 syncRemoteData();
 setInterval(render, 1000);
@@ -493,7 +612,5 @@ setInterval(() => {
     activeBoardType = activeBoardType === "departures" ? "arrivals" : "departures";
     pageIndex = 0;
   }
-  adIndex += 1;
-  renderAd();
   render();
 }, 10000);

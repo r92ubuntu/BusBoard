@@ -288,7 +288,8 @@ function renderAd() {
     const video = document.createElement("video");
     video.src = item.src;
     video.autoplay = true;
-    video.muted = true;
+    video.muted = false;
+    video.volume = 1;
     video.loop = false;
     video.playsInline = true;
     video.onerror = () => renderFallbackAd(fallback);
@@ -366,12 +367,12 @@ function renderYoutubeAd(item, fallback) {
         modestbranding: 1,
         playsinline: 1,
         rel: 0,
-        mute: 1,
         origin: window.location.origin && window.location.origin !== "null" ? window.location.origin : undefined
       },
       events: {
         onReady: (event) => {
-          event.target.mute();
+          event.target.unMute();
+          event.target.setVolume(100);
           event.target.playVideo();
         },
         onStateChange: (event) => {

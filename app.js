@@ -558,8 +558,15 @@ function loadAdsForStation(forceRender = true) {
   adItems = nextItems;
   adSignature = nextSignature;
 
-  adIndex = 0;
+  adIndex = randomAdIndex(adItems.length);
   renderAd();
+}
+
+function randomAdIndex(length) {
+  if (!length) {
+    return 0;
+  }
+  return Math.floor(Math.random() * length);
 }
 
 function renderStationOptions() {

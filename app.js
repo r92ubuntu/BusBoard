@@ -342,10 +342,14 @@ function renderYoutubeAd(item, fallback) {
   }
 
   const frame = document.createElement("iframe");
-  frame.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1`;
+  const origin = window.location.origin && window.location.origin !== "null"
+    ? `&origin=${encodeURIComponent(window.location.origin)}`
+    : "";
+  frame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&playsinline=1${origin}`;
   frame.title = item.title || "Video publicitario";
-  frame.allow = "autoplay; encrypted-media; picture-in-picture";
-  frame.loading = "lazy";
+  frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frame.allowFullscreen = true;
   els.adStage.appendChild(frame);
 
   if (item.link) {

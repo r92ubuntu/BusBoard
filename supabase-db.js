@@ -1,7 +1,15 @@
 (function () {
   const config = window.BusBoardSupabaseConfig || {};
-  const hasClient = Boolean(window.supabase && config.url && config.anonKey && !config.url.includes("TU-PROYECTO"));
-  const client = hasClient ? window.supabase.createClient(config.url, config.anonKey) : null;
+  const projectUrl = normalizeProjectUrl(config.url);
+  const hasClient = Boolean(window.supabase && projectUrl && config.anonKey && !projectUrl.includes("TU-PROYECTO"));
+  const client = hasClient ? window.supabase.createClient(projectUrl, config.anonKey) : null;
+
+  function normalizeProjectUrl(url) {
+    return String(url || "")
+      .trim()
+      .replace(/\/rest\/v1\/?$/i, "")
+      .replace(/\/+$/g, "");
+  }
 
   function enabled() {
     return Boolean(client);

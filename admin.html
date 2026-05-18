@@ -50,6 +50,42 @@
         </div>
       </section>
 
+      <section class="panel list-panel">
+        <div class="panel-head row-head">
+          <div>
+            <h2>Estaciones</h2>
+            <p>Catalogo usado por horarios, pantalla publica y anuncios.</p>
+          </div>
+        </div>
+        <form id="stationForm" class="form compact-form">
+          <input id="stationId" type="hidden">
+          <label>
+            Nombre estacion
+            <input id="stationName" type="text" required placeholder="Marcala">
+          </label>
+          <label class="check-label">
+            <input id="stationActive" type="checkbox" checked>
+            Activa
+          </label>
+          <div class="form-actions">
+            <button type="submit">Guardar estacion</button>
+            <button id="clearStationForm" class="secondary" type="button">Limpiar estacion</button>
+          </div>
+        </form>
+        <div class="admin-table-wrap">
+          <table class="admin-table stations-table">
+            <thead>
+              <tr>
+                <th>Estacion</th>
+                <th>Activa</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="stationRows"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="admin-grid">
         <section class="panel">
           <div class="panel-head">
@@ -180,7 +216,7 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
           <input id="adId" type="hidden">
           <label>
             Estacion
-            <input id="adStation" type="text" required placeholder="Marcala o all">
+            <select id="adStation"></select>
           </label>
           <label>
             Tipo

@@ -53,6 +53,14 @@
     return String(value || "").slice(0, 5);
   }
 
+  function stationFromRow(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      active: row.active !== false
+    };
+  }
+
   function emptySchedules() {
     const data = {};
     window.BusBoardStore.DAYS.forEach(([day]) => {
@@ -154,6 +162,60 @@
       youtubeUrl: row.youtube_url || "",
       link: row.target_url || ""
     }));
+  }
+
+  async function loadStations() {
+    if (!client) {
+      return [];
+    }
+
+    const { data, error } = await client
+      .from("stations")
+      .select("*")
+      .order("name");
+
+    if (error) {
+      throw error;
+    }
+
+    return data.map(stationFromRow);
+  }
+
+  async function upsertStation(station) {
+    if (!client) {
+      return station;
+    }
+
+    const row = {
+      id: station.id && station.id.startsWith("station-") ? undefined : station.id,
+      name: station.name,
+      active: station.active !== false
+    };
+    Object.keys(row).forEach((key) => row[key] === undefined && delete row[key]);
+
+    if (!row.id) {
+      const { data, error } = await client.from("stations").insert(row).select("*").single();
+      if (error) {
+        throw error;
+      }
+      return stationFromRow(data);
+    }
+
+    const { data, error } = await client.from("stations").upsert(row).select("*").single();
+    if (error) {
+      throw error;
+    }
+    return stationFromRow(data);
+  }
+
+  async function deleteStation(id) {
+    if (!client || String(id).startsWith("station-")) {
+      return;
+    }
+    const { error } = await client.from("stations").delete().eq("id", id);
+    if (error) {
+      throw error;
+    }
   }
 
   async function loadAdsRaw() {
@@ -269,6 +331,9 @@
     upsertTrip,
     deleteTrip,
     replaceSchedules,
+    loadStations,
+    upsertStation,
+    deleteStation,
     loadAds,
     loadAdsRaw,
     upsertAd,

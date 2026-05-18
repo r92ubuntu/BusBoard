@@ -2,6 +2,7 @@
   const STORAGE_KEY = "busboard.schedules.v1";
   const STATION_KEY = "busboard.activeStation.v1";
   const ADS_KEY = "busboard.ads.v1";
+  const STATIONS_KEY = "busboard.stations.v1";
 
   const DAYS = [
     ["monday", "Lunes"],
@@ -117,6 +118,7 @@
 
   function stations(data = read()) {
     const names = new Set();
+    readStations().forEach((station) => names.add(station.name));
     DAYS.forEach(([day]) => {
       (data[day] || []).forEach((item) => {
         if (item.origin) {
@@ -128,6 +130,49 @@
       });
     });
     return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }
+
+  function defaultStations() {
+    return ["Marcala", "La Paz", "Tegucigalpa", "Comayagua"].map((name, index) => ({
+      id: `station-${index + 1}`,
+      name,
+      active: true
+    }));
+  }
+
+  function readStations() {
+    const raw = localStorage.getItem(STATIONS_KEY);
+    if (!raw) {
+      const defaults = defaultStations();
+      saveStations(defaults);
+      return defaults;
+    }
+
+    try {
+      return JSON.parse(raw).map(normalizeStation);
+    } catch {
+      const defaults = defaultStations();
+      saveStations(defaults);
+      return defaults;
+    }
+  }
+
+  function normalizeStation(station) {
+    return {
+      id: station.id || `station-${Date.now()}`,
+      name: String(station.name || "").trim(),
+      active: station.active !== false
+    };
+  }
+
+  function saveStations(stations) {
+    const unique = new Map();
+    stations.map(normalizeStation).forEach((station) => {
+      if (station.name) {
+        unique.set(station.name.toLowerCase(), station);
+      }
+    });
+    localStorage.setItem(STATIONS_KEY, JSON.stringify(Array.from(unique.values())));
   }
 
   function parseCsv(text) {
@@ -295,6 +340,9 @@
     getActiveStation,
     setActiveStation,
     stations,
+    defaultStations,
+    readStations,
+    saveStations,
     importCsv,
     toCsv,
     defaultAds,

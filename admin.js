@@ -11,6 +11,12 @@ const els = {
   tripId: document.querySelector("#tripId"),
   day: document.querySelector("#day"),
   activeStation: document.querySelector("#activeStation"),
+  stationForm: document.querySelector("#stationForm"),
+  stationId: document.querySelector("#stationId"),
+  stationName: document.querySelector("#stationName"),
+  stationActive: document.querySelector("#stationActive"),
+  clearStationForm: document.querySelector("#clearStationForm"),
+  stationRows: document.querySelector("#stationRows"),
   departureTime: document.querySelector("#departureTime"),
   arrivalTime: document.querySelector("#arrivalTime"),
   company: document.querySelector("#company"),
@@ -75,6 +81,14 @@ async function syncRemoteData() {
       store.saveAds(ads);
       renderAds();
     }
+
+    const stations = await window.BusBoardBackend.loadStations?.();
+    if (stations?.length) {
+      store.saveStations(stations);
+      renderStations();
+      renderStationRows();
+      renderAdStationOptions();
+    }
   } catch (error) {
     message(`No se pudo leer Supabase: ${error.message}`, "error");
   }
@@ -102,6 +116,19 @@ function renderStations() {
     `<option value="${escapeHtml(station)}">${escapeHtml(station)}</option>`
   )).join("");
   els.activeStation.value = active;
+  renderAdStationOptions();
+}
+
+function renderAdStationOptions() {
+  const currentValue = els.adStation.value || store.getActiveStation();
+  const options = [
+    ["all", "Todas las estaciones"],
+    ...store.readStations().filter((station) => station.active).map((station) => [station.name, station.name])
+  ];
+  els.adStation.innerHTML = options.map(([value, label]) => (
+    `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`
+  )).join("");
+  els.adStation.value = options.some(([value]) => value === currentValue) ? currentValue : "all";
 }
 
 function data() {
@@ -173,6 +200,86 @@ function renderList() {
   `).join("");
 }
 
+function renderStationRows() {
+  els.stationRows.innerHTML = store.readStations().map((station) => `
+    <tr>
+      <td>${escapeHtml(station.name)}</td>
+      <td>${station.active ? "Si" : "No"}</td>
+      <td class="actions-cell">
+        <button data-station-action="edit" data-id="${station.id}" type="button">Editar</button>
+        <button data-station-action="delete" data-id="${station.id}" class="danger" type="button">Borrar</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function resetStationForm() {
+  els.stationId.value = "";
+  els.stationName.value = "";
+  els.stationActive.checked = true;
+}
+
+async function saveStation(event) {
+  event.preventDefault();
+  const stations = store.readStations();
+  const id = els.stationId.value || `station-${Date.now()}`;
+  const station = {
+    id,
+    name: els.stationName.value.trim(),
+    active: els.stationActive.checked
+  };
+
+  const next = stations.filter((item) => item.id !== id && item.name.toLowerCase() !== station.name.toLowerCase());
+  next.push(station);
+  store.saveStations(next);
+
+  try {
+    const savedStation = await window.BusBoardBackend?.upsertStation?.(station);
+    if (savedStation?.id && savedStation.id !== station.id) {
+      const updated = store.readStations().filter((item) => item.id !== station.id);
+      updated.push(savedStation);
+      store.saveStations(updated);
+    }
+  } catch (error) {
+    message(`Estacion guardada local, pero fallo Supabase: ${error.message}`, "error");
+    return;
+  }
+
+  renderStations();
+  renderStationRows();
+  renderAdStationOptions();
+  resetStationForm();
+  message("Estacion guardada.");
+}
+
+function editStation(id) {
+  const station = store.readStations().find((item) => item.id === id);
+  if (!station) {
+    return;
+  }
+  els.stationId.value = station.id;
+  els.stationName.value = station.name;
+  els.stationActive.checked = station.active;
+  message("Editando estacion seleccionada.");
+}
+
+async function deleteStation(id) {
+  const next = store.readStations().filter((item) => item.id !== id);
+  store.saveStations(next);
+
+  try {
+    await window.BusBoardBackend?.deleteStation?.(id);
+  } catch (error) {
+    message(`Estacion borrada local, pero fallo Supabase: ${error.message}`, "error");
+    return;
+  }
+
+  renderStations();
+  renderStationRows();
+  renderAdStationOptions();
+  message("Estacion borrada.");
+}
+
 function adsData() {
   return store.readAds().sort((a, b) => a.display_order - b.display_order || a.title.localeCompare(b.title));
 }
@@ -198,6 +305,7 @@ function renderAds() {
 function resetAdForm() {
   els.adId.value = "";
   els.adStation.value = store.getActiveStation();
+  renderAdStationOptions();
   els.adType.value = "youtube";
   els.adTitle.value = "";
   els.adText.value = "";
@@ -489,6 +597,23 @@ els.tripRows.addEventListener("click", (event) => {
   }
 });
 
+els.stationForm.addEventListener("submit", saveStation);
+els.clearStationForm.addEventListener("click", resetStationForm);
+els.stationRows.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+
+  const { stationAction, id } = button.dataset;
+  if (stationAction === "edit") {
+    editStation(id);
+  }
+  if (stationAction === "delete") {
+    deleteStation(id);
+  }
+});
+
 els.adForm.addEventListener("submit", saveAd);
 els.clearAdForm.addEventListener("click", resetAdForm);
 els.adRows.addEventListener("click", (event) => {
@@ -612,6 +737,8 @@ els.copyMonday.addEventListener("click", async () => {
 initDays();
 renderStations();
 renderList();
+resetStationForm();
+renderStationRows();
 resetAdForm();
 renderAds();
 applyLoginState();

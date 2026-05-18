@@ -548,6 +548,10 @@ button.danger {
   padding: 20px;
 }
 
+.compact-form {
+  grid-template-columns: minmax(220px, 1fr) 160px auto;
+}
+
 .form label {
   display: grid;
   gap: 7px;
@@ -644,6 +648,10 @@ button.danger {
   min-width: 980px;
 }
 
+.stations-table {
+  min-width: 520px;
+}
+
 .admin-table th,
 .admin-table td {
   padding: 12px 14px;
@@ -711,6 +719,10 @@ button.danger {
   }
 
   .form {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-form {
     grid-template-columns: 1fr;
   }
 

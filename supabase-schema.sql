@@ -15,6 +15,13 @@ create table if not exists public.trips (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.stations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  active boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.ads (
   id uuid primary key default gen_random_uuid(),
   station text,
@@ -51,8 +58,14 @@ create trigger ads_set_updated_at
 before update on public.ads
 for each row execute function public.set_updated_at();
 
+drop trigger if exists stations_set_updated_at on public.stations;
+create trigger stations_set_updated_at
+before update on public.stations
+for each row execute function public.set_updated_at();
+
 alter table public.trips enable row level security;
 alter table public.ads enable row level security;
+alter table public.stations enable row level security;
 
 drop policy if exists "Public can read active trips" on public.trips;
 create policy "Public can read active trips"
@@ -81,6 +94,27 @@ on public.ads for all
 to authenticated
 using (true)
 with check (true);
+
+drop policy if exists "Public can read active stations" on public.stations;
+create policy "Public can read active stations"
+on public.stations for select
+using (active = true);
+
+drop policy if exists "Authenticated admins can manage stations" on public.stations;
+create policy "Authenticated admins can manage stations"
+on public.stations for all
+to authenticated
+using (true)
+with check (true);
+
+insert into public.stations
+  (name, active)
+values
+  ('Marcala', true),
+  ('La Paz', true),
+  ('Tegucigalpa', true),
+  ('Comayagua', true)
+on conflict (name) do nothing;
 
 insert into public.trips
   (id, day, company, departure_time, arrival_time, origin, destination, route, status, delay)

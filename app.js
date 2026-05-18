@@ -30,17 +30,16 @@ let youtubeApiPromise = null;
 let soundEnabled = localStorage.getItem("busboard.soundEnabled.v1") === "yes";
 const youtubeMaxMs = 180000;
 const fallbackAds = [
-  { title: "Anunciate aqui", text: "Espacio disponible para comercios locales" },
-  { title: "Terminal Central", text: "Informacion para pasajeros y visitantes" },
-  { title: "Viaja seguro", text: "Confirma tu salida antes de abordar" }
+  { title: "Sin anuncios programados", text: "Este espacio esta disponible para la estacion seleccionada" }
 ];
 
 function stationKey(value) {
-  return String(value || "")
+  const key = String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
+  return key.startsWith("mancala") ? key.replace(/^mancala/, "marcala") : key;
 }
 
 function mediaType(file) {
@@ -150,13 +149,14 @@ function inActiveSeason(item) {
 
 function tripsForType(type) {
   const station = store.getActiveStation();
+  const activeStationKey = stationKey(station);
   return daySchedule()
     .filter(inActiveSeason)
     .filter((item) => {
       if (type === "departures") {
-        return item.origin === station;
+        return stationKey(item.origin) === activeStationKey;
       }
-      return item.destination === station;
+      return stationKey(item.destination) === activeStationKey;
     })
     .map((item) => ({ ...item, scheduledDate: timeToDate(eventTime(item, type), eventDelay(item, type)) }))
     .filter((item) => minutesUntil(item.scheduledDate) > -30 || item.status === "cancelled")
@@ -318,6 +318,12 @@ async function syncRemoteData() {
   }
 
   try {
+    const remoteStations = await window.BusBoardBackend.loadStations?.();
+    if (remoteStations?.length) {
+      store.saveStations(remoteStations);
+      renderStationOptions();
+    }
+
     const schedules = await window.BusBoardBackend.loadSchedules();
     if (schedules && hasAnyTrips(schedules)) {
       store.save(schedules);
@@ -325,19 +331,17 @@ async function syncRemoteData() {
     }
 
     const remoteAds = await window.BusBoardBackend.loadAds();
-    if (remoteAds.length) {
-      store.saveAds(remoteAds.map((ad) => ({
-        id: `remote-${ad.title}-${ad.link || ad.youtubeUrl || ad.src}`,
-        station: (ad.stations || ["all"])[0],
-        title: ad.title,
-        text: ad.text || "",
-        type: ad.type,
-        media_url: ad.youtubeUrl || ad.src || "",
-        target_url: ad.link || "",
-        active: true,
-        display_order: 100
-      })));
-    }
+    store.saveAds(remoteAds.map((ad) => ({
+      id: `remote-${ad.title}-${ad.link || ad.youtubeUrl || ad.src}`,
+      station: (ad.stations || ["all"])[0],
+      title: ad.title,
+      text: ad.text || "",
+      type: ad.type,
+      media_url: ad.youtubeUrl || ad.src || "",
+      target_url: ad.link || "",
+      active: true,
+      display_order: 100
+    })));
 
     loadAdsForStation(false);
     render();
@@ -558,7 +562,9 @@ function renderFallbackAd(item) {
 
 function loadAdsForStation(forceRender = true) {
   const key = stationKey(store.getActiveStation());
-  const configured = Array.isArray(window.BusBoardAdConfig) ? window.BusBoardAdConfig : [];
+  const configured = Array.isArray(window.BusBoardMediaConfig)
+    ? window.BusBoardMediaConfig
+    : (Array.isArray(window.BusBoardAdConfig) ? window.BusBoardAdConfig : []);
   const managed = store.readAds().map((ad) => ({
     type: ad.type,
     stations: [ad.station || "all"],
@@ -570,7 +576,13 @@ function loadAdsForStation(forceRender = true) {
     display_order: ad.display_order,
     active: ad.active
   }));
-  const files = Array.isArray(window.BusBoardAds) ? window.BusBoardAds : [];
+  const files = Array.isArray(window.BusBoardAssetCatalog)
+    ? window.BusBoardAssetCatalog
+    : (Array.isArray(window.BusBoardPantallaLista)
+      ? window.BusBoardPantallaLista
+      : (Array.isArray(window.BusBoardMediaList)
+      ? window.BusBoardMediaList
+      : (Array.isArray(window.BusBoardAds) ? window.BusBoardAds : [])));
   const configuredAds = [...managed, ...configured]
     .filter((item) => item.active !== false)
     .filter((item) => {
@@ -580,10 +592,19 @@ function loadAdsForStation(forceRender = true) {
     .sort((a, b) => Number(a.display_order || 100) - Number(b.display_order || 100));
   const fileAds = files
     .map((file) => (typeof file === "string" ? { file } : file))
-    .filter((item) => stationKey(item.station || item.file).startsWith(key))
+    .filter((item) => {
+      if (!item.file) {
+        return false;
+      }
+      if (item.station) {
+        const stations = Array.isArray(item.station) ? item.station : [item.station];
+        return stations.some((station) => stationKey(station) === key || stationKey(station) === "all");
+      }
+      return stationKey(item.file).startsWith(key);
+    })
     .map((item) => ({
       type: mediaType(item.file),
-      src: `./media/${item.file}`,
+      src: item.basePath ? `${item.basePath.replace(/\/$/, "")}/${item.file}` : `./pantalla/${item.file}`,
       title: item.title || item.file,
       link: item.link || ""
     }));

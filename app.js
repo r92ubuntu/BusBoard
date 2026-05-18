@@ -368,23 +368,37 @@ function renderYoutubeAd(item, fallback) {
   }
 
   const playerId = `youtube-player-${Date.now()}`;
-  const playerHost = document.createElement("div");
-  playerHost.id = playerId;
-  playerHost.className = "youtube-player";
-  els.adStage.appendChild(playerHost);
+  const playerOrigin = youtubePlayerOrigin();
+  const playerParams = new URLSearchParams({
+    enablejsapi: "1",
+    autoplay: "1",
+    controls: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    rel: "0"
+  });
+
+  if (!soundEnabled) {
+    playerParams.set("mute", "1");
+  }
+  if (playerOrigin) {
+    playerParams.set("origin", playerOrigin);
+    playerParams.set("widget_referrer", playerOrigin);
+  }
+
+  const frame = document.createElement("iframe");
+  frame.id = playerId;
+  frame.className = "youtube-player";
+  frame.src = `https://www.youtube.com/embed/${videoId}?${playerParams.toString()}`;
+  frame.title = item.title || "Video publicitario";
+  frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frame.allowFullscreen = true;
+  els.adStage.appendChild(frame);
 
   loadYoutubeApi().then(() => {
     scheduleNextAd(youtubeMaxMs);
     youtubePlayer = new window.YT.Player(playerId, {
-      videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 0,
-        modestbranding: 1,
-        playsinline: 1,
-        rel: 0,
-        origin: window.location.origin && window.location.origin !== "null" ? window.location.origin : undefined
-      },
       events: {
         onReady: (event) => {
           if (soundEnabled) {
@@ -405,22 +419,13 @@ function renderYoutubeAd(item, fallback) {
         },
         onError: () => {
           renderFallbackAd(fallback);
+        },
+        onAutoplayBlocked: () => {
+          showSoundPrompt();
         }
       }
     });
   }).catch(() => renderFallbackAd(fallback));
-
-  /*
-  const origin = window.location.origin && window.location.origin !== "null"
-    ? `&origin=${encodeURIComponent(window.location.origin)}`
-    : "";
-  frame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&playsinline=1${origin}`;
-  frame.title = item.title || "Video publicitario";
-  frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-  frame.referrerPolicy = "strict-origin-when-cross-origin";
-  frame.allowFullscreen = true;
-  els.adStage.appendChild(frame);
-  */
 
   if (item.link) {
     const link = document.createElement("a");
@@ -493,6 +498,13 @@ function loadYoutubeApi() {
   });
 
   return youtubeApiPromise;
+}
+
+function youtubePlayerOrigin() {
+  if (window.location.origin && window.location.origin !== "null") {
+    return window.location.origin;
+  }
+  return "";
 }
 
 function renderLinkAd(item) {

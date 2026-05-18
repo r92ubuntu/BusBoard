@@ -89,8 +89,8 @@
       <section class="admin-grid">
         <section class="panel">
           <div class="panel-head">
-            <h2>Horario normal</h2>
-            <p>Selecciona un dia, agrega rutas o cambia estados manuales.</p>
+            <h2>Itinerario normal</h2>
+            <p>Registra cada viaje una sola vez con origen, destino, hora de salida y hora de llegada.</p>
           </div>
 
           <form id="scheduleForm" class="form">
@@ -155,7 +155,7 @@
         <section class="panel">
           <div class="panel-head">
             <h2>Carga por lote</h2>
-            <p>Importa un archivo CSV con columnas: day,company,departure_time,arrival_time,origin,destination,route,status,delay,start_date,end_date.</p>
+            <p>Importa viajes. No indiques si son salida o llegada; el sistema lo deduce por estacion.</p>
           </div>
           <div class="import-box">
             <input id="csvFile" type="file" accept=".csv,text/csv">
@@ -172,8 +172,8 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
       <section class="panel list-panel">
         <div class="panel-head row-head">
           <div>
-            <h2 id="listTitle">Rutas del dia</h2>
-            <p id="listSubtitle">Mostrando salidas y llegadas.</p>
+            <h2 id="listTitle">Itinerarios del dia</h2>
+            <p id="listSubtitle">Cada fila es un viaje unico entre dos estaciones.</p>
           </div>
           <button id="copyMonday" class="secondary" type="button">Copiar lunes a todos</button>
         </div>
@@ -181,7 +181,6 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Tipo</th>
                 <th>Empresa</th>
                 <th>Salida</th>
                 <th>Llegada</th>

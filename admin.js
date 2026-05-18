@@ -177,12 +177,11 @@ function escapeHtml(value) {
 function renderList() {
   const dayLabel = store.DAYS.find(([key]) => key === els.day.value)?.[1] || els.day.value;
   const rows = selectedTrips();
-  els.listTitle.textContent = `Rutas de ${dayLabel}`;
-  els.listSubtitle.textContent = `${rows.length} registros cargados para este dia.`;
+  els.listTitle.textContent = `Itinerarios de ${dayLabel}`;
+  els.listSubtitle.textContent = `${rows.length} viaje(s) unico(s) cargado(s) para este dia.`;
 
   els.tripRows.innerHTML = rows.map((item) => `
     <tr>
-      <td>${tripTypeLabel(item)}</td>
       <td>${escapeHtml(item.company)}</td>
       <td>${escapeHtml(item.departure_time)}</td>
       <td>${escapeHtml(item.arrival_time)}</td>
@@ -389,17 +388,6 @@ function seasonLabel(item) {
     return "Normal";
   }
   return `${item.start_date || "..."} a ${item.end_date || "..."}`;
-}
-
-function tripTypeLabel(item) {
-  const station = store.getActiveStation();
-  if (item.origin === station) {
-    return "Salida";
-  }
-  if (item.destination === station) {
-    return "Llegada";
-  }
-  return "Otra";
 }
 
 async function upsertTrip(event) {

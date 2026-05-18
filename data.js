@@ -301,30 +301,7 @@
   }
 
   function defaultAds() {
-    return [
-      {
-        id: "ad-demo-all",
-        station: "all",
-        title: "Anunciate aqui",
-        text: "Publicidad visible en pantalla, tablet y smartphone",
-        type: "link",
-        media_url: "",
-        target_url: "https://example.com",
-        active: true,
-        display_order: 100
-      },
-      {
-        id: "ad-demo-marcala",
-        station: "Marcala",
-        title: "Video Marcala",
-        text: "Publicidad local",
-        type: "youtube",
-        media_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        target_url: "https://www.youtube.com",
-        active: true,
-        display_order: 10
-      }
-    ];
+    return [];
   }
 
   function readAds() {

@@ -1,15 +1,19 @@
 $mediaPath = Join-Path $PSScriptRoot "media"
-$assetsPath = Join-Path $PSScriptRoot "pantalla"
-$outputPath = Join-Path $assetsPath "lista.js"
+$pantallaPath = Join-Path $PSScriptRoot "pantalla"
+$outputPath = Join-Path $pantallaPath "lista.js"
 $extensions = @(".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".mov", ".webm")
 
 if (-not (Test-Path -LiteralPath $mediaPath)) {
   New-Item -ItemType Directory -Force -Path $mediaPath | Out-Null
 }
 
-if (-not (Test-Path -LiteralPath $assetsPath)) {
-  New-Item -ItemType Directory -Force -Path $assetsPath | Out-Null
+if (-not (Test-Path -LiteralPath $pantallaPath)) {
+  New-Item -ItemType Directory -Force -Path $pantallaPath | Out-Null
 }
+
+Get-ChildItem -LiteralPath $pantallaPath -File |
+  Where-Object { $extensions -contains $_.Extension.ToLowerInvariant() } |
+  Remove-Item -Force
 
 function ConvertTo-StationKey($value) {
   $normalized = $value.Normalize([Text.NormalizationForm]::FormD)
@@ -24,6 +28,7 @@ function ConvertTo-StationKey($value) {
 }
 
 $knownStations = @{
+  "all" = "all"
   "comayagua" = "Comayagua"
   "laesperanza" = "La Esperanza"
   "lapaz" = "La Paz"
@@ -48,7 +53,7 @@ $files = Get-ChildItem -LiteralPath $mediaPath -File |
   Where-Object { $extensions -contains $_.Extension.ToLowerInvariant() } |
   Sort-Object Name |
   ForEach-Object {
-    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $assetsPath $_.Name) -Force
+    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $pantallaPath $_.Name) -Force
     $station = Get-StationFromFileName $_.BaseName
     $item = [ordered]@{
       file = $_.Name

@@ -52,10 +52,23 @@ Los anuncios se administran desde `admin.html`.
 
 Campos:
 - `Estacion`: nombre de estacion o `all` para todas.
-- `Tipo`: `youtube`, `image` o `link`.
-- `URL video/imagen`: enlace de YouTube o URL publica de imagen.
+- `Tipo`: `youtube`, `tiktok`, `image` o `link`.
+- `URL video/imagen`: enlace de YouTube, Shorts, TikTok o URL publica de imagen.
 - `Enlace anunciante`: pagina que abre el anuncio al tocar/clic.
 - `Orden`: prioridad de rotacion.
 - `Activo`: permite pausar anuncios.
 
-La pantalla mezcla automaticamente videos de YouTube, imagenes y enlaces, filtrados por la estacion activa.
+La pantalla mezcla automaticamente videos de YouTube, Shorts, TikTok, imagenes y enlaces, filtrados por la estacion activa.
+
+## Imagenes y videos locales
+
+1. Coloca imagenes, GIF o videos locales en `media`.
+2. Ejecuta `generar-ads.ps1`.
+3. El script limpia y regenera `pantalla`, que es la carpeta que usa la web.
+4. Sube a GitHub `pantalla/lista.js` y los archivos dentro de `pantalla`.
+
+Extensiones soportadas: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`, `.mp4`, `.mov`, `.webm`.
+
+## Migraciones
+
+Si el proyecto Supabase ya existia antes de TikTok, ejecuta `supabase-migration-tiktok.sql` una vez en el SQL Editor.

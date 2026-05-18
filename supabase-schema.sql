@@ -27,7 +27,7 @@ create table if not exists public.ads (
   station text,
   title text not null,
   text text,
-  type text not null check (type in ('image','youtube','link')),
+  type text not null check (type in ('image','youtube','tiktok','link')),
   image_url text,
   youtube_url text,
   target_url text,

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>BusBoard - Administracion</title>
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./styles.css?v=20260518-prod1">
   </head>
   <body>
     <section id="loginView" class="login-view">
@@ -207,7 +207,7 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
         <div class="panel-head row-head">
           <div>
             <h2>Publicidad</h2>
-            <p>Lista anuncios por estacion. La pantalla mezcla imagenes, enlaces y videos de YouTube automaticamente.</p>
+            <p>Lista anuncios por estacion. La pantalla mezcla imagenes, enlaces, YouTube, Shorts y TikTok automaticamente.</p>
           </div>
         </div>
         <div class="import-box">
@@ -226,6 +226,7 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
             Tipo
             <select id="adType">
               <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
               <option value="image">Imagen</option>
               <option value="link">Enlace</option>
             </select>
@@ -240,7 +241,7 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
           </label>
           <label>
             URL video/imagen
-            <input id="adMediaUrl" type="url" placeholder="https://youtube.com/watch?v=...">
+            <input id="adMediaUrl" type="url" placeholder="YouTube, Shorts, TikTok o imagen">
           </label>
           <label>
             Enlace anunciante
@@ -282,8 +283,8 @@ monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,202
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js"></script>
-    <script src="./data.js"></script>
-    <script src="./supabase-db.js"></script>
-    <script src="./admin.js"></script>
+    <script src="./data.js?v=20260518-prod1"></script>
+    <script src="./supabase-db.js?v=20260518-prod1"></script>
+    <script src="./admin.js?v=20260518-prod1"></script>
   </body>
 </html>

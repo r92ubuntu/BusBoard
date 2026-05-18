@@ -29,6 +29,7 @@ let youtubePlayer = null;
 let youtubeApiPromise = null;
 let soundEnabled = localStorage.getItem("busboard.soundEnabled.v1") === "yes";
 const youtubeMaxMs = 180000;
+const tiktokDisplayMs = 30000;
 const fallbackAds = [
   { title: "Sin anuncios programados", text: "Este espacio esta disponible para la estacion seleccionada" }
 ];
@@ -280,6 +281,11 @@ function renderAd() {
     return;
   }
 
+  if (item.type === "tiktok") {
+    renderTikTokAd(item, fallback);
+    return;
+  }
+
   if (item.type === "link") {
     renderLinkAd(item);
     return;
@@ -337,7 +343,7 @@ async function syncRemoteData() {
       title: ad.title,
       text: ad.text || "",
       type: ad.type,
-      media_url: ad.youtubeUrl || ad.src || "",
+      media_url: ad.youtubeUrl || ad.tiktokUrl || ad.src || "",
       target_url: ad.link || "",
       active: true,
       display_order: 100
@@ -415,6 +421,40 @@ function renderYoutubeAd(item, fallback) {
   frame.allowFullscreen = true;
   els.adStage.appendChild(frame);
   */
+
+  if (item.link) {
+    const link = document.createElement("a");
+    link.href = item.link;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.className = "ad-cta";
+    link.textContent = "Ver publicidad";
+    els.adStage.appendChild(link);
+  }
+}
+
+function renderTikTokAd(item, fallback) {
+  const videoId = tiktokId(item.tiktokUrl || item.youtubeUrl || item.src || item.link);
+  if (!videoId) {
+    renderFallbackAd(fallback);
+    return;
+  }
+
+  const frame = document.createElement("iframe");
+  const mute = soundEnabled ? "0" : "1";
+  frame.src = `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&controls=0&loop=0&mute=${mute}`;
+  frame.title = item.title || "Video TikTok";
+  frame.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frame.allowFullscreen = true;
+  frame.onerror = () => renderFallbackAd(fallback);
+  els.adStage.appendChild(frame);
+
+  if (!soundEnabled) {
+    showSoundPrompt();
+  }
+
+  scheduleNextAd(tiktokDisplayMs);
 
   if (item.link) {
     const link = document.createElement("a");
@@ -545,7 +585,31 @@ function wrapAd(item, node) {
 
 function youtubeId(url) {
   const text = String(url || "");
-  const match = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/);
+  try {
+    const parsed = new URL(text);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      return parsed.pathname.split("/").filter(Boolean)[0] || "";
+    }
+    if (host.endsWith("youtube.com")) {
+      if (parsed.pathname === "/watch") {
+        return parsed.searchParams.get("v") || "";
+      }
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (["embed", "shorts", "live"].includes(parts[0])) {
+        return parts[1] || "";
+      }
+    }
+  } catch {
+    const match = text.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    return match ? match[1] : "";
+  }
+  return "";
+}
+
+function tiktokId(url) {
+  const text = String(url || "");
+  const match = text.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
   return match ? match[1] : "";
 }
 
@@ -572,6 +636,7 @@ function loadAdsForStation(forceRender = true) {
     text: ad.text,
     src: ad.type === "image" ? ad.media_url : "",
     youtubeUrl: ad.type === "youtube" ? ad.media_url : "",
+    tiktokUrl: ad.type === "tiktok" ? ad.media_url : "",
     link: ad.target_url,
     display_order: ad.display_order,
     active: ad.active
@@ -615,6 +680,7 @@ function loadAdsForStation(forceRender = true) {
     title: item.title,
     src: item.src,
     youtubeUrl: item.youtubeUrl,
+    tiktokUrl: item.tiktokUrl,
     link: item.link,
     display_order: item.display_order
   })));

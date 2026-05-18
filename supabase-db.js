@@ -160,6 +160,7 @@
       text: row.text || "",
       src: row.image_url || "",
       youtubeUrl: row.youtube_url || "",
+      tiktokUrl: row.type === "tiktok" ? row.youtube_url || "" : "",
       link: row.target_url || ""
     }));
   }
@@ -258,7 +259,7 @@
       text: ad.text || null,
       type: ad.type,
       image_url: ad.type === "image" ? ad.media_url : null,
-      youtube_url: ad.type === "youtube" ? ad.media_url : null,
+      youtube_url: ad.type === "youtube" || ad.type === "tiktok" ? ad.media_url : null,
       target_url: ad.target_url || null,
       active: ad.active !== false,
       display_order: Number(ad.display_order || 100)

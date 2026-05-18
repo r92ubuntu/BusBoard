@@ -533,6 +533,8 @@ function adTemplateCsv() {
   return [
     "station,type,title,text,media_url,target_url,display_order,active",
     "Marcala,youtube,Video Marcala,Promocion local,https://www.youtube.com/watch?v=dQw4w9WgXcQ,https://youtube.com,10,true",
+    "Comayagua,youtube,Short Comayagua,Promocion corta,https://www.youtube.com/shorts/dQw4w9WgXcQ,https://youtube.com,15,true",
+    "La Paz,tiktok,TikTok La Paz,Video social,https://www.tiktok.com/@tiktok/video/7106594312292453678,https://www.tiktok.com,18,true",
     "La Paz,image,Anuncio La Paz,Imagen promocional,https://example.com/lapaz.jpg,https://example.com/lapaz,20,true",
     "all,link,Anunciate aqui,Visible en todas las estaciones,,https://example.com,100,true"
   ].join("\n");

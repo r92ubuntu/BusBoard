@@ -10,6 +10,7 @@ const els = {
   form: document.querySelector("#scheduleForm"),
   tripId: document.querySelector("#tripId"),
   day: document.querySelector("#day"),
+  dayChecks: document.querySelector("#dayChecks"),
   activeStation: document.querySelector("#activeStation"),
   stationForm: document.querySelector("#stationForm"),
   stationId: document.querySelector("#stationId"),
@@ -99,10 +100,26 @@ function hasAnyTrips(schedules) {
 }
 
 function initDays() {
-  els.day.innerHTML = store.DAYS.map(([key, label]) => (
-    `<option value="${key}">${label}</option>`
+  els.dayChecks.innerHTML = store.DAYS.map(([key, label]) => (
+    `<label class="day-check"><input type="checkbox" value="${key}"> ${label}</label>`
   )).join("");
-  els.day.value = store.todayKey();
+  setSelectedDays([store.todayKey()]);
+}
+
+function selectedDays() {
+  const days = Array.from(els.dayChecks.querySelectorAll("input:checked")).map((input) => input.value);
+  return days.length ? days : [store.todayKey()];
+}
+
+function setSelectedDays(days) {
+  const selected = new Set(days);
+  els.dayChecks.querySelectorAll("input").forEach((input) => {
+    input.checked = selected.has(input.value);
+  });
+}
+
+function primarySelectedDay() {
+  return selectedDays()[0];
 }
 
 function renderStations() {
@@ -161,7 +178,7 @@ function resetForm() {
 
 function selectedTrips() {
   const current = data();
-  return (current[els.day.value] || []).sort((a, b) => a.departure_time.localeCompare(b.departure_time));
+  return (current[primarySelectedDay()] || []).sort((a, b) => a.departure_time.localeCompare(b.departure_time));
 }
 
 function escapeHtml(value) {
@@ -175,7 +192,7 @@ function escapeHtml(value) {
 }
 
 function renderList() {
-  const dayLabel = store.DAYS.find(([key]) => key === els.day.value)?.[1] || els.day.value;
+  const dayLabel = store.dayLabel(primarySelectedDay());
   const rows = selectedTrips();
   els.listTitle.textContent = `Itinerarios de ${dayLabel}`;
   els.listSubtitle.textContent = `${rows.length} viaje(s) unico(s) cargado(s) para este dia.`;
@@ -393,7 +410,8 @@ function seasonLabel(item) {
 async function upsertTrip(event) {
   event.preventDefault();
   const current = data();
-  const day = els.day.value;
+  const days = selectedDays();
+  const day = days[0];
   const id = els.tripId.value || `${day}-trip-${Date.now()}`;
   const trip = {
     id,
@@ -409,13 +427,24 @@ async function upsertTrip(event) {
     end_date: els.endDate.value
   };
 
-  current[day] = current[day].filter((item) => item.id !== id);
-  current[day].push(trip);
-  current[day].sort((a, b) => a.departure_time.localeCompare(b.departure_time));
+  days.forEach((targetDay, index) => {
+    const tripForDay = {
+      ...trip,
+      id: index === 0 ? id : `${targetDay}-trip-${Date.now()}-${index}`
+    };
+    current[targetDay] = current[targetDay].filter((item) => item.id !== id);
+    current[targetDay].push(tripForDay);
+    current[targetDay].sort((a, b) => a.departure_time.localeCompare(b.departure_time));
+  });
   save(current);
 
   try {
-    await window.BusBoardBackend?.upsertTrip(day, trip);
+    for (const [index, targetDay] of days.entries()) {
+      await window.BusBoardBackend?.upsertTrip(targetDay, {
+        ...trip,
+        id: index === 0 ? id : `${targetDay}-trip-${Date.now()}-${index}`
+      });
+    }
   } catch (error) {
     message(`Guardado local, pero fallo Supabase: ${error.message}`, "error");
     return;
@@ -428,12 +457,14 @@ async function upsertTrip(event) {
 
 function editTrip(id) {
   const current = data();
-  const trip = current[els.day.value].find((item) => item.id === id);
+  const day = primarySelectedDay();
+  const trip = current[day].find((item) => item.id === id);
   if (!trip) {
     return;
   }
 
   els.tripId.value = trip.id;
+  setSelectedDays([day]);
   els.departureTime.value = trip.departure_time;
   els.arrivalTime.value = trip.arrival_time;
   els.company.value = trip.company;
@@ -449,7 +480,8 @@ function editTrip(id) {
 
 async function deleteTrip(id) {
   const current = data();
-  current[els.day.value] = current[els.day.value].filter((item) => item.id !== id);
+  const day = primarySelectedDay();
+  current[day] = current[day].filter((item) => item.id !== id);
   save(current);
 
   try {
@@ -476,8 +508,8 @@ function download(filename, content, type = "text/csv") {
 function templateCsv() {
   return [
     "day,company,departure_time,arrival_time,origin,destination,route,status,delay,start_date,end_date",
-    "monday,Transportes Marcala,07:00,07:50,Marcala,La Paz,ML-01,on_time,0,,",
-    "monday,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,2026-12-31"
+    "Lunes,Transportes Marcala,07:00,07:50,Marcala,La Paz,ML-01,on_time,0,,",
+    "Martes,Rapidos Centro,08:30,09:20,La Paz,Marcala,LM-02,delayed,10,2026-12-01,2026-12-31"
   ].join("\n");
 }
 
@@ -563,7 +595,22 @@ els.logout.addEventListener("click", () => {
 
 els.form.addEventListener("submit", upsertTrip);
 els.clearForm.addEventListener("click", resetForm);
-els.day.addEventListener("change", renderList);
+els.dayChecks.addEventListener("change", renderList);
+document.querySelectorAll("[data-day-preset]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const preset = button.dataset.dayPreset;
+    if (preset === "weekdays") {
+      setSelectedDays(["monday", "tuesday", "wednesday", "thursday", "friday"]);
+    }
+    if (preset === "weekend") {
+      setSelectedDays(["saturday", "sunday"]);
+    }
+    if (preset === "all") {
+      setSelectedDays(store.DAYS.map(([day]) => day));
+    }
+    renderList();
+  });
+});
 els.activeStation.addEventListener("change", () => {
   store.setActiveStation(els.activeStation.value);
   renderList();

@@ -95,10 +95,15 @@
 
           <form id="scheduleForm" class="form">
             <input id="tripId" type="hidden">
-            <label>
-              Dia
-              <select id="day"></select>
-            </label>
+            <div class="day-picker">
+              <span>Dias del viaje</span>
+              <div class="day-shortcuts">
+                <button data-day-preset="weekdays" type="button">Lunes a viernes</button>
+                <button data-day-preset="all" type="button">Toda la semana</button>
+                <button data-day-preset="weekend" type="button">Fin de semana</button>
+              </div>
+              <div id="dayChecks" class="day-checks"></div>
+            </div>
             <label>
               Sale de
               <input id="origin" type="text" required placeholder="Marcala">

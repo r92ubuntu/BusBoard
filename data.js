@@ -14,6 +14,25 @@
     ["sunday", "Domingo"]
   ];
 
+  const DAY_ALIASES = {
+    lunes: "monday",
+    monday: "monday",
+    martes: "tuesday",
+    tuesday: "tuesday",
+    miercoles: "wednesday",
+    miércoles: "wednesday",
+    wednesday: "wednesday",
+    jueves: "thursday",
+    thursday: "thursday",
+    viernes: "friday",
+    friday: "friday",
+    sabado: "saturday",
+    sábado: "saturday",
+    saturday: "saturday",
+    domingo: "sunday",
+    sunday: "sunday"
+  };
+
   const STATUS_LABELS = {
     on_time: "A tiempo",
     boarding: "Abordando",
@@ -106,6 +125,19 @@
   function todayKey() {
     const jsDay = new Date().getDay();
     return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][jsDay];
+  }
+
+  function normalizeDay(value) {
+    const key = String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    return DAY_ALIASES[key] || key;
+  }
+
+  function dayLabel(day) {
+    return DAYS.find(([key]) => key === day)?.[1] || day;
   }
 
   function getActiveStation() {
@@ -238,7 +270,7 @@
     });
 
     parseCsv(text).forEach((row, index) => {
-      const day = String(row.day || "").toLowerCase();
+      const day = normalizeDay(row.day);
 
       if (!data[day]) {
         return;
@@ -332,11 +364,14 @@
 
   window.BusBoardStore = {
     DAYS,
+    DAY_ALIASES,
     STATUS_LABELS,
     defaultSchedules,
     read,
     save,
     todayKey,
+    normalizeDay,
+    dayLabel,
     getActiveStation,
     setActiveStation,
     stations,

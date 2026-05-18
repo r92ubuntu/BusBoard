@@ -133,7 +133,21 @@ function renderStations() {
     `<option value="${escapeHtml(station)}">${escapeHtml(station)}</option>`
   )).join("");
   els.activeStation.value = active;
+  renderTripStationOptions();
   renderAdStationOptions();
+}
+
+function renderTripStationOptions() {
+  const stations = store.readStations().filter((station) => station.active);
+  const originValue = els.origin.value || store.getActiveStation();
+  const destinationValue = els.destination.value || stations.find((station) => station.name !== originValue)?.name || originValue;
+  const options = stations.map((station) => (
+    `<option value="${escapeHtml(station.name)}">${escapeHtml(station.name)}</option>`
+  )).join("");
+  els.origin.innerHTML = options;
+  els.destination.innerHTML = options;
+  els.origin.value = stations.some((station) => station.name === originValue) ? originValue : stations[0]?.name || "";
+  els.destination.value = stations.some((station) => station.name === destinationValue) ? destinationValue : stations[0]?.name || "";
 }
 
 function renderAdStationOptions() {
@@ -263,6 +277,7 @@ async function saveStation(event) {
 
   renderStations();
   renderStationRows();
+  renderTripStationOptions();
   renderAdStationOptions();
   resetStationForm();
   message("Estacion guardada.");
@@ -292,6 +307,7 @@ async function deleteStation(id) {
 
   renderStations();
   renderStationRows();
+  renderTripStationOptions();
   renderAdStationOptions();
   message("Estacion borrada.");
 }

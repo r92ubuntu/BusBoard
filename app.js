@@ -52,14 +52,9 @@ function mediaType(file) {
 }
 
 function timeToDate(time, delayMinutes = 0) {
-  const now = new Date();
   const [hours, minutes] = String(time).split(":").map(Number);
-  const result = new Date(now);
+  const result = new Date();
   result.setHours(hours || 0, (minutes || 0) + Number(delayMinutes || 0), 0, 0);
-
-  if (result.getTime() < now.getTime() - 30 * 60000) {
-    result.setDate(result.getDate() + 1);
-  }
 
   return result;
 }

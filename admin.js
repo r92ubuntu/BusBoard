@@ -492,6 +492,8 @@ function editTrip(id) {
   els.startDate.value = trip.start_date;
   els.endDate.value = trip.end_date;
   message("Editando registro seleccionado.");
+  els.form.scrollIntoView({ behavior: "smooth", block: "start" });
+  requestAnimationFrame(() => els.origin.focus({ preventScroll: true }));
 }
 
 async function deleteTrip(id) {
